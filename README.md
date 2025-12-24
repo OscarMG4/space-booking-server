@@ -1,59 +1,181 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Space Booking API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Una API REST para gestionar espacios y reservas. La hice con Laravel 12 y autenticación JWT.
 
-## About Laravel
+## ¿Qué hace?
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Básicamente es un sistema donde puedes:
+- Registrarte y loguearte con tokens JWT
+- Crear y gestionar espacios (salas de reuniones, oficinas, auditorios, etc.)
+- Hacer reservas de esos espacios
+- Cancelar reservas cuando ya no las necesites
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Lo más útil es que valida todo automáticamente: no te deja hacer dos reservas al mismo tiempo, revisa que el espacio tenga capacidad suficiente, y te limita a 5 reservas activas para que no acapares todo.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Lo que necesitas tener instalado
 
-## Learning Laravel
+- PHP 8.2 o superior
+- Composer
+- MySQL 8.0 o superior
+- Las extensiones de PHP: OpenSSL, PDO, Mbstring, Tokenizer, XML, Ctype, JSON
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Cómo instalarlo
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Clona el repo y entra a la carpeta:
 
-## Laravel Sponsors
+```bash
+git clone <repository-url>
+cd space-booking-server
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Instala las dependencias:
 
-### Premium Partners
+```bash
+composer install
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Copia el archivo de configuración:
 
-## Contributing
+```bash
+cp .env.example .env
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Genera las claves que necesita Laravel:
 
-## Code of Conduct
+```bash
+php artisan key:generate
+php artisan jwt:secret
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Configuración
 
-## Security Vulnerabilities
+Abre el archivo `.env` y pon tus datos de MySQL:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=spacebooking
+DB_USERNAME=root
+DB_PASSWORD=tu_password
+```
 
-## License
+Luego corre las migraciones:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan migrate
+php artisan db:seed --class=RolePermissionSeeder
+```
+
+## Cómo ejecutarlo
+
+Simplemente corre:
+
+```bash
+php artisan serve
+```
+
+Y listo, la API estará en `http://localhost:8000`
+
+Para probar que todo funciona:
+
+```bash
+curl http://localhost:8000/api/health
+```
+
+## Tests
+
+Escribí 18 tests para asegurarme de que todo funcione bien. Para correrlos:
+
+```bash
+php artisan test
+```
+
+Cubren todo lo importante: autenticación, crear/editar/borrar espacios, hacer reservas y cancelarlas.
+
+**Importante:** Si vas a correr los tests, crea primero la base de datos de prueba:
+
+```sql
+CREATE DATABASE spacebooking_test;
+```
+
+## Endpoints principales
+
+### Autenticación
+
+```
+POST   /api/auth/register   - Registrarte
+POST   /api/auth/login      - Iniciar sesión
+GET    /api/auth/me         - Ver tu perfil (requiere token)
+POST   /api/auth/logout     - Cerrar sesión (requiere token)
+```
+
+### Espacios
+
+```
+GET    /api/spaces          - Ver todos los espacios
+GET    /api/spaces/{id}     - Ver un espacio específico
+POST   /api/spaces          - Crear un espacio nuevo
+PUT    /api/spaces/{id}     - Actualizar un espacio
+DELETE /api/spaces/{id}     - Eliminar un espacio
+```
+
+Puedes filtrar los espacios por tipo, disponibilidad, capacidad mínima, precio máximo o buscar por nombre.
+
+### Reservas
+
+```
+GET    /api/bookings           - Ver tus reservas
+GET    /api/bookings/{id}      - Ver detalle de una reserva
+POST   /api/bookings           - Crear una reserva
+PUT    /api/bookings/{id}      - Actualizar una reserva
+DELETE /api/bookings/{id}      - Eliminar una reserva
+POST   /api/bookings/{id}/cancel - Cancelar una reserva
+```
+
+## Validaciones que incluí
+
+Cuando haces una reserva, el sistema valida:
+- Que no sea en el pasado
+- Mínimo 30 minutos de duración
+- Máximo 8 horas
+- Que no se cruce con otra reserva del mismo espacio
+- Que no tengas más de 5 reservas activas
+- Que el espacio tenga capacidad para la cantidad de personas
+
+
+
+## Tipos de espacios
+
+Puedes crear estos tipos de espacios:
+- `sala_reuniones`
+- `oficina`
+- `auditorio`
+- `laboratorio`
+- `espacio_coworking`
+- `otro`
+
+## Algunas decisiones que tomé
+
+- **Sin comentarios en el código**: Prefiero que el código sea claro por sí mismo. Los nombres de funciones y variables explican qué hace cada cosa.
+- **Soft deletes**: Nada se borra realmente de la base de datos, solo se marca como eliminado. Así mantienes el historial.
+- **JWT con 60 minutos**: Los tokens duran una hora. Si necesitas más tiempo, puedes refrescarlos.
+- **Respuestas consistentes**: Todas las respuestas tienen el mismo formato, sea éxito o error.
+
+## Variables importantes del .env
+
+```env
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_DATABASE=spacebooking
+
+JWT_TTL=60                    # Token dura 1 hora
+JWT_REFRESH_TTL=20160         # Puedes refrescar por 14 días
+```
+
+---
+
+Hecho con Laravel 12
