@@ -35,9 +35,6 @@ return new class extends Migration
             $table->index('start_time');
             $table->index('end_time');
             $table->index(['space_id', 'start_time', 'end_time']); // Para verificar disponibilidad
-            
-            // Constraint: end_time debe ser mayor que start_time
-            $table->check('end_time > start_time');
         });
     }
 

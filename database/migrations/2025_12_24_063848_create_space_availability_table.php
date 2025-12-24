@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('space_availability', function (Blueprint $table) {
+        Schema::create('space_availabilities', function (Blueprint $table) {
             $table->id(); // ID único de la configuración de disponibilidad
             $table->foreignId('space_id')->constrained('spaces')->onDelete('cascade'); // Espacio al que aplica esta disponibilidad
             $table->enum('day_of_week', ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']); // Día de la semana
@@ -26,9 +26,6 @@ return new class extends Migration
             $table->index('space_id');
             $table->index('day_of_week');
             $table->index(['space_id', 'day_of_week']);
-            
-            // Constraint: end_time debe ser mayor que start_time
-            $table->check('end_time > start_time');
         });
     }
 
@@ -37,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('space_availability');
+        Schema::dropIfExists('space_availabilities');
     }
 };

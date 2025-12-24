@@ -21,9 +21,9 @@ class DatabaseSeeder extends Seeder
             ReviewSeeder::class,          // Séptimo: reseñas (necesita reservas completadas)
         ]);
 
-        $this->command->info('✅ Database seeded successfully!');
+        $this->command->info('Database seeded successfully!');
         $this->command->info('');
-        $this->command->info('👤 Credenciales de acceso:');
+        $this->command->info('Credenciales de acceso:');
         $this->command->info('Admin: admin@spacebooking.com / password');
         $this->command->info('Gestor: manager@spacebooking.com / password');
         $this->command->info('Usuario: juan@spacebooking.com / password');

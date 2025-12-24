@@ -29,9 +29,6 @@ return new class extends Migration
             $table->index('rating');
             $table->index('is_approved');
             
-            // Constraint: rating debe estar entre 1 y 5
-            $table->check('rating >= 1 AND rating <= 5');
-            
             // Un usuario solo puede hacer una reseña por reserva
             $table->unique(['user_id', 'booking_id']);
         });
