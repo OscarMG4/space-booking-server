@@ -1,0 +1,580 @@
+{
+	"info": {
+		"_postman_id": "space-booking-api-v1",
+		"name": "Space Booking API",
+		"description": "API RESTful para gestión de espacios y reservas con autenticación JWT",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.data.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Usuario Ejemplo\",\n    \"email\": \"usuario@ejemplo.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Registra un nuevo usuario en el sistema y devuelve un token JWT"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.data.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"usuario@ejemplo.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Inicia sesión con credenciales válidas y devuelve un token JWT"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "me"]
+						},
+						"description": "Obtiene el perfil del usuario autenticado"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.success && response.data.token) {",
+									"        pm.collectionVariables.set('jwt_token', response.data.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "refresh"]
+						},
+						"description": "Refresca el token JWT actual"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Cierra la sesión del usuario y revoca el token JWT"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de autenticación JWT"
+		},
+		{
+			"name": "Spaces",
+			"item": [
+				{
+					"name": "List Spaces",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/spaces",
+							"host": ["{{base_url}}"],
+							"path": ["spaces"],
+							"query": [
+								{
+									"key": "type",
+									"value": "sala_reuniones",
+									"description": "Tipo de espacio",
+									"disabled": true
+								},
+								{
+									"key": "is_available",
+									"value": "1",
+									"description": "Disponibilidad (1 o 0)",
+									"disabled": true
+								},
+								{
+									"key": "min_capacity",
+									"value": "10",
+									"description": "Capacidad mínima",
+									"disabled": true
+								},
+								{
+									"key": "max_price",
+									"value": "100",
+									"description": "Precio máximo por hora",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "sala",
+									"description": "Búsqueda por nombre",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista todos los espacios disponibles con filtros opcionales"
+					},
+					"response": []
+				},
+				{
+					"name": "View Space",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/spaces/1",
+							"host": ["{{base_url}}"],
+							"path": ["spaces", "1"]
+						},
+						"description": "Obtiene los detalles de un espacio específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Space",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Sala de Reuniones A\",\n    \"description\": \"Sala equipada con proyector y pizarra\",\n    \"type\": \"sala_reuniones\",\n    \"capacity\": 20,\n    \"price_per_hour\": 50.00,\n    \"location\": \"Edificio A, Piso 3\",\n    \"is_available\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/spaces",
+							"host": ["{{base_url}}"],
+							"path": ["spaces"]
+						},
+						"description": "Crea un nuevo espacio en el sistema"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Space",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Sala de Reuniones A - Actualizada\",\n    \"description\": \"Sala equipada con proyector, pizarra y videoconferencia\",\n    \"type\": \"sala_reuniones\",\n    \"capacity\": 25,\n    \"price_per_hour\": 60.00,\n    \"location\": \"Edificio A, Piso 3\",\n    \"is_available\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/spaces/1",
+							"host": ["{{base_url}}"],
+							"path": ["spaces", "1"]
+						},
+						"description": "Actualiza la información de un espacio existente"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Space",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/spaces/1",
+							"host": ["{{base_url}}"],
+							"path": ["spaces", "1"]
+						},
+						"description": "Elimina un espacio (soft delete). No permite eliminar espacios con reservas activas"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de espacios: salas de reuniones, oficinas, auditorios, etc."
+		},
+		{
+			"name": "Bookings",
+			"item": [
+				{
+					"name": "List My Bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bookings",
+							"host": ["{{base_url}}"],
+							"path": ["bookings"]
+						},
+						"description": "Lista todas las reservas del usuario autenticado"
+					},
+					"response": []
+				},
+				{
+					"name": "View Booking",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bookings/1",
+							"host": ["{{base_url}}"],
+							"path": ["bookings", "1"]
+						},
+						"description": "Obtiene los detalles de una reserva específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"space_id\": 1,\n    \"start_time\": \"2025-12-25 10:00:00\",\n    \"end_time\": \"2025-12-25 12:00:00\",\n    \"purpose\": \"Reunión de planificación trimestral\",\n    \"attendees_count\": 15\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/bookings",
+							"host": ["{{base_url}}"],
+							"path": ["bookings"]
+						},
+						"description": "Crea una nueva reserva. Validaciones:\n- No permite fechas pasadas\n- Duración mínima: 30 minutos\n- Duración máxima: 8 horas\n- Valida capacidad del espacio\n- Previene superposición de reservas\n- Máximo 5 reservas activas por usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Booking",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"space_id\": 1,\n    \"start_time\": \"2025-12-25 14:00:00\",\n    \"end_time\": \"2025-12-25 16:00:00\",\n    \"purpose\": \"Reunión de planificación trimestral - Actualizada\",\n    \"attendees_count\": 18\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/bookings/1",
+							"host": ["{{base_url}}"],
+							"path": ["bookings", "1"]
+						},
+						"description": "Actualiza una reserva existente. Solo el propietario puede actualizar su reserva"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bookings/1/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["bookings", "1", "cancel"]
+						},
+						"description": "Cancela una reserva (soft delete con historial). Solo el propietario puede cancelar su reserva"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Booking",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/bookings/1",
+							"host": ["{{base_url}}"],
+							"path": ["bookings", "1"]
+						},
+						"description": "Elimina permanentemente una reserva. Solo el propietario puede eliminar su reserva"
+					},
+					"response": []
+				}
+			],
+			"description": "Gestión de reservas con validaciones inteligentes"
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": ["{{base_url}}"],
+					"path": ["health"]
+				},
+				"description": "Verifica el estado de la API"
+			},
+			"response": []
+		}
+	]
+}
