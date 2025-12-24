@@ -10,15 +10,11 @@ use Carbon\Carbon;
 
 class BookingController extends Controller
 {
-    /**
-     * Listar reservas del usuario autenticado
-     */
     public function index(Request $request)
     {
         $user = auth('api')->user();
         $query = Booking::where('user_id', $user->id);
 
-        // Filtros opcionales
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -27,7 +23,6 @@ class BookingController extends Controller
             $query->where('space_id', $request->space_id);
         }
 
-        // Filtrar por rango de fechas
         if ($request->has('start_date')) {
             $query->whereDate('start_time', '>=', $request->start_date);
         }
@@ -46,9 +41,6 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * Crear una nueva reserva
-     */
     public function store(Request $request)
     {
         $user = auth('api')->user();
@@ -70,7 +62,6 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Validaciones adicionales
         $validationError = $this->validateBooking($request, $user);
         if ($validationError) {
             return response()->json([
@@ -79,7 +70,6 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Calcular precio total
         $space = Space::findOrFail($request->space_id);
         $startTime = Carbon::parse($request->start_time);
         $endTime = Carbon::parse($request->end_time);
@@ -108,9 +98,6 @@ class BookingController extends Controller
         ], 201);
     }
 
-    /**
-     * Ver detalle de una reserva
-     */
     public function show($id)
     {
         $user = auth('api')->user();
@@ -132,9 +119,6 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * Actualizar una reserva
-     */
     public function update(Request $request, $id)
     {
         $user = auth('api')->user();
@@ -149,7 +133,6 @@ class BookingController extends Controller
             ], 404);
         }
 
-        // No permitir editar reservas canceladas o completadas
         if (in_array($booking->status, ['cancelled', 'completed'])) {
             return response()->json([
                 'success' => false,
@@ -174,7 +157,6 @@ class BookingController extends Controller
             ], 422);
         }
 
-        // Validaciones adicionales si cambia fecha o espacio
         if ($request->has('start_time') || $request->has('end_time') || $request->has('space_id')) {
             $validationError = $this->validateBooking($request, $user, $booking->id);
             if ($validationError) {
@@ -185,7 +167,6 @@ class BookingController extends Controller
             }
         }
 
-        // Recalcular precio si cambiaron las fechas o el espacio
         if ($request->has('start_time') || $request->has('end_time') || $request->has('space_id')) {
             $spaceId = $request->space_id ?? $booking->space_id;
             $space = Space::findOrFail($spaceId);
@@ -205,9 +186,6 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * Eliminar una reserva
-     */
     public function destroy($id)
     {
         $user = auth('api')->user();
@@ -230,9 +208,6 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * Cancelar una reserva (cancelación lógica)
-     */
     public function cancel(Request $request, $id)
     {
         $user = auth('api')->user();
@@ -278,41 +253,33 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * Validar una reserva
-     */
     private function validateBooking(Request $request, $user, $excludeBookingId = null)
     {
         $startTime = Carbon::parse($request->start_time ?? $request->get('start_time'));
         $endTime = Carbon::parse($request->end_time ?? $request->get('end_time'));
         $spaceId = $request->space_id ?? $request->get('space_id');
 
-        // 1. Validar que no sea una fecha pasada
         if ($startTime->isPast()) {
             return 'No se pueden crear reservas en fechas pasadas';
         }
 
-        // 2. Validar duración mínima (30 minutos) y máxima (8 horas)
         $durationInMinutes = $startTime->diffInMinutes($endTime);
         if ($durationInMinutes < 30) {
             return 'La duración mínima de una reserva es de 30 minutos';
         }
-        if ($durationInMinutes > 480) { // 8 horas
+        if ($durationInMinutes > 480) {
             return 'La duración máxima de una reserva es de 8 horas';
         }
 
-        // 3. Verificar que el espacio esté disponible
         $space = Space::find($spaceId);
         if (!$space || !$space->is_available) {
             return 'El espacio no está disponible';
         }
 
-        // 4. Validar capacidad si se especifica número de asistentes
         if ($request->has('attendees_count') && $request->attendees_count > $space->capacity) {
             return 'El número de asistentes excede la capacidad del espacio';
         }
 
-        // 5. Validar superposición de reservas
         $overlappingBookings = Booking::where('space_id', $spaceId)
             ->where('status', '!=', 'cancelled')
             ->where(function ($query) use ($startTime, $endTime) {
@@ -332,7 +299,6 @@ class BookingController extends Controller
             return 'Ya existe una reserva para este espacio en el horario seleccionado';
         }
 
-        // 6. Límite de reservas activas por usuario (máximo 5 reservas futuras)
         $activeBookingsCount = Booking::where('user_id', $user->id)
             ->whereIn('status', ['pending', 'confirmed'])
             ->where('start_time', '>', now())
