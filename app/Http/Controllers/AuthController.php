@@ -12,9 +12,6 @@ use Tymon\JWTAuth\Facades\JWTGuard;
 
 class AuthController extends Controller
 {
-    /**
-     * Registro de nuevo usuario
-     */
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -55,9 +52,6 @@ class AuthController extends Controller
         ], 201);
     }
 
-    /**
-     * Inicio de sesión
-     */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -74,7 +68,6 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        /** @var \Tymon\JWTAuth\JWTGuard $guard */
         $guard = Auth::guard('api');
         
         if (!$token = $guard->attempt($credentials)) {
@@ -105,12 +98,8 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Cerrar sesión
-     */
     public function logout()
     {
-        /** @var \Tymon\JWTAuth\JWTGuard $guard */
         $guard = Auth::guard('api');
         $guard->logout();
 
@@ -120,14 +109,9 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Refrescar token
-     */
     public function refresh()
     {
-        /** @var \Tymon\JWTAuth\JWTGuard $guard */
-        $guard = Auth::guard('api');
-        $token = $guard->refresh();
+        $token = JWTAuth::refresh();
 
         return response()->json([
             'success' => true,
@@ -139,9 +123,6 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Obtener usuario autenticado
-     */
     public function me()
     {
         $user = auth('api')->user();

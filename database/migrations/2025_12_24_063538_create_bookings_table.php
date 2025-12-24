@@ -6,41 +6,34 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('bookings', function (Blueprint $table) {
-            $table->id(); // ID único de la reserva
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Usuario que hace la reserva
-            $table->foreignId('space_id')->constrained('spaces')->onDelete('cascade'); // Espacio reservado
-            $table->string('event_title'); // Título del evento o reunión
-            $table->text('event_description')->nullable(); // Descripción del evento
-            $table->dateTime('start_time'); // Fecha y hora de inicio de la reserva
-            $table->dateTime('end_time'); // Fecha y hora de fin de la reserva
-            $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('confirmed'); // Estado de la reserva
-            $table->integer('attendees_count')->unsigned()->nullable(); // Número de asistentes esperados
-            $table->text('special_requirements')->nullable(); // Requerimientos especiales (catering, setup, etc)
-            $table->decimal('total_price', 10, 2)->default(0.00); // Precio total calculado de la reserva
-            $table->text('cancellation_reason')->nullable(); // Razón de cancelación si aplica
-            $table->timestamp('cancelled_at')->nullable(); // Fecha y hora de cancelación
-            $table->timestamps(); // created_at y updated_at
-            $table->softDeletes(); // deleted_at para borrado lógico
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('space_id')->constrained('spaces')->onDelete('cascade');
+            $table->string('event_title');
+            $table->text('event_description')->nullable();
+            $table->dateTime('start_time');
+            $table->dateTime('end_time');
+            $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('confirmed');
+            $table->integer('attendees_count')->unsigned()->nullable();
+            $table->text('special_requirements')->nullable();
+            $table->decimal('total_price', 10, 2)->default(0.00);
+            $table->text('cancellation_reason')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
             
-            // Indexes
             $table->index('user_id');
             $table->index('space_id');
             $table->index('status');
             $table->index('start_time');
             $table->index('end_time');
-            $table->index(['space_id', 'start_time', 'end_time']); // Para verificar disponibilidad
+            $table->index(['space_id', 'start_time', 'end_time']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('bookings');

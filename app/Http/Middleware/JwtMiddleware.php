@@ -11,13 +11,6 @@ use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class JwtMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return mixed
-     */
     public function handle(Request $request, Closure $next)
     {
         try {

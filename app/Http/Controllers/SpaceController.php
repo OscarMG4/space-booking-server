@@ -8,14 +8,10 @@ use Illuminate\Support\Facades\Validator;
 
 class SpaceController extends Controller
 {
-    /**
-     * Listar todos los espacios
-     */
     public function index(Request $request)
     {
         $query = Space::query();
 
-        // Filtros opcionales
         if ($request->has('type')) {
             $query->where('type', $request->type);
         }
@@ -32,7 +28,6 @@ class SpaceController extends Controller
             $query->where('price_per_hour', '<=', $request->max_price);
         }
 
-        // Búsqueda por nombre
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -45,9 +40,6 @@ class SpaceController extends Controller
         ]);
     }
 
-    /**
-     * Crear un nuevo espacio
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -80,9 +72,6 @@ class SpaceController extends Controller
         ], 201);
     }
 
-    /**
-     * Ver detalle de un espacio
-     */
     public function show($id)
     {
         $space = Space::find($id);
@@ -94,7 +83,6 @@ class SpaceController extends Controller
             ], 404);
         }
 
-        // Cargar relaciones opcionales
         $space->load('reviews', 'availabilities');
 
         return response()->json([
@@ -103,9 +91,6 @@ class SpaceController extends Controller
         ]);
     }
 
-    /**
-     * Actualizar un espacio
-     */
     public function update(Request $request, $id)
     {
         $space = Space::find($id);
@@ -147,9 +132,6 @@ class SpaceController extends Controller
         ]);
     }
 
-    /**
-     * Eliminar un espacio
-     */
     public function destroy($id)
     {
         $space = Space::find($id);
@@ -161,7 +143,6 @@ class SpaceController extends Controller
             ], 404);
         }
 
-        // Verificar si tiene reservas activas
         $activeBookings = $space->bookings()
             ->whereIn('status', ['pending', 'confirmed'])
             ->where('end_time', '>', now())
