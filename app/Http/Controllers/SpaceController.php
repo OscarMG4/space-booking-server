@@ -17,7 +17,7 @@ class SpaceController extends Controller
         }
 
         if ($request->has('is_available')) {
-            $query->where('is_available', $request->is_available);
+            $query->where('is_available', filter_var($request->is_available, FILTER_VALIDATE_BOOLEAN));
         }
 
         if ($request->has('min_capacity')) {
