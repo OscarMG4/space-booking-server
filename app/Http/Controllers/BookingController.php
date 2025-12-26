@@ -2,67 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Booking\CancelBookingRequest;
+use App\Http\Requests\Booking\StoreBookingRequest;
+use App\Http\Requests\Booking\UpdateBookingRequest;
+use App\Http\Resources\BookingResource;
 use App\Models\Booking;
-use App\Models\Space;
+use App\Services\BookingService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
 
 class BookingController extends Controller
 {
+    protected $bookingService;
+
+    public function __construct(BookingService $bookingService)
+    {
+        $this->bookingService = $bookingService;
+    }
     public function index(Request $request)
     {
         $user = auth('api')->user();
-        $query = Booking::where('user_id', $user->id);
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('space_id')) {
-            $query->where('space_id', $request->space_id);
-        }
-
-        if ($request->has('start_date')) {
-            $query->whereDate('start_time', '>=', $request->start_date);
-        }
-
-        if ($request->has('end_date')) {
-            $query->whereDate('end_time', '<=', $request->end_date);
-        }
-
-        $bookings = $query->with(['space', 'user'])
-            ->orderBy('start_time', 'desc')
-            ->paginate($request->get('per_page', 15));
+        
+        $filters = $request->only(['status', 'space_id', 'start_date', 'end_date']);
+        $perPage = $request->get('per_page', 15);
+        
+        $bookings = $this->bookingService->getUserBookings($user, $filters, $perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $bookings
+            'data' => BookingResource::collection($bookings)->response()->getData(true)
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreBookingRequest $request)
     {
         $user = auth('api')->user();
 
-        $validator = Validator::make($request->all(), [
-            'space_id' => 'required|exists:spaces,id',
-            'event_title' => 'required|string|max:255',
-            'event_description' => 'nullable|string',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
-            'attendees_count' => 'nullable|integer|min:1',
-            'special_requirements' => 'nullable|string',
-        ]);
+        $validationError = $this->bookingService->validateBooking(
+            $request->start_time,
+            $request->end_time,
+            $request->space_id,
+            $user,
+            $request->attendees_count
+        );
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $validationError = $this->validateBooking($request, $user);
         if ($validationError) {
             return response()->json([
                 'success' => false,
@@ -70,31 +52,12 @@ class BookingController extends Controller
             ], 422);
         }
 
-        $space = Space::findOrFail($request->space_id);
-        $startTime = Carbon::parse($request->start_time);
-        $endTime = Carbon::parse($request->end_time);
-        $hours = $startTime->diffInHours($endTime);
-        $totalPrice = $hours * $space->price_per_hour;
-
-        $booking = Booking::create([
-            'user_id' => $user->id,
-            'space_id' => $request->space_id,
-            'event_title' => $request->event_title,
-            'event_description' => $request->event_description,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'status' => 'confirmed',
-            'attendees_count' => $request->attendees_count,
-            'special_requirements' => $request->special_requirements,
-            'total_price' => $totalPrice,
-        ]);
-
-        $booking->load('space', 'user');
+        $booking = $this->bookingService->createBooking($request->validated(), $user);
 
         return response()->json([
             'success' => true,
             'message' => 'Reserva creada exitosamente',
-            'data' => $booking
+            'data' => new BookingResource($booking)
         ], 201);
     }
 
@@ -115,11 +78,11 @@ class BookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $booking
+            'data' => new BookingResource($booking)
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateBookingRequest $request, $id)
     {
         $user = auth('api')->user();
         $booking = Booking::where('id', $id)
@@ -133,32 +96,23 @@ class BookingController extends Controller
             ], 404);
         }
 
-        if (in_array($booking->status, ['cancelled', 'completed'])) {
+        if (!$this->bookingService->canEditBooking($booking)) {
             return response()->json([
                 'success' => false,
                 'message' => 'No se puede editar una reserva cancelada o completada'
             ], 422);
         }
 
-        $validator = Validator::make($request->all(), [
-            'space_id' => 'sometimes|required|exists:spaces,id',
-            'event_title' => 'sometimes|required|string|max:255',
-            'event_description' => 'nullable|string',
-            'start_time' => 'sometimes|required|date',
-            'end_time' => 'sometimes|required|date|after:start_time',
-            'attendees_count' => 'nullable|integer|min:1',
-            'special_requirements' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
         if ($request->has('start_time') || $request->has('end_time') || $request->has('space_id')) {
-            $validationError = $this->validateBooking($request, $user, $booking->id);
+            $validationError = $this->bookingService->validateBooking(
+                $request->start_time ?? $booking->start_time,
+                $request->end_time ?? $booking->end_time,
+                $request->space_id ?? $booking->space_id,
+                $user,
+                $request->attendees_count,
+                $booking->id
+            );
+
             if ($validationError) {
                 return response()->json([
                     'success' => false,
@@ -167,22 +121,12 @@ class BookingController extends Controller
             }
         }
 
-        if ($request->has('start_time') || $request->has('end_time') || $request->has('space_id')) {
-            $spaceId = $request->space_id ?? $booking->space_id;
-            $space = Space::findOrFail($spaceId);
-            $startTime = Carbon::parse($request->start_time ?? $booking->start_time);
-            $endTime = Carbon::parse($request->end_time ?? $booking->end_time);
-            $hours = $startTime->diffInHours($endTime);
-            $request->merge(['total_price' => $hours * $space->price_per_hour]);
-        }
-
-        $booking->update($request->all());
-        $booking->load('space', 'user');
+        $booking = $this->bookingService->updateBooking($booking, $request->validated());
 
         return response()->json([
             'success' => true,
             'message' => 'Reserva actualizada exitosamente',
-            'data' => $booking
+            'data' => new BookingResource($booking)
         ]);
     }
 
@@ -208,7 +152,7 @@ class BookingController extends Controller
         ]);
     }
 
-    public function cancel(Request $request, $id)
+    public function cancel(CancelBookingRequest $request, $id)
     {
         $user = auth('api')->user();
         $booking = Booking::where('id', $id)
@@ -222,96 +166,19 @@ class BookingController extends Controller
             ], 404);
         }
 
-        if ($booking->status === 'cancelled') {
+        if (!$this->bookingService->canCancelBooking($booking)) {
             return response()->json([
                 'success' => false,
                 'message' => 'La reserva ya está cancelada'
             ], 422);
         }
 
-        $validator = Validator::make($request->all(), [
-            'cancellation_reason' => 'required|string|max:500',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $booking->update([
-            'status' => 'cancelled',
-            'cancellation_reason' => $request->cancellation_reason,
-            'cancelled_at' => now(),
-        ]);
+        $booking = $this->bookingService->cancelBooking($booking, $request->cancellation_reason);
 
         return response()->json([
             'success' => true,
             'message' => 'Reserva cancelada exitosamente',
-            'data' => $booking
+            'data' => new BookingResource($booking)
         ]);
-    }
-
-    private function validateBooking(Request $request, $user, $excludeBookingId = null)
-    {
-        $startTime = Carbon::parse($request->start_time ?? $request->get('start_time'));
-        $endTime = Carbon::parse($request->end_time ?? $request->get('end_time'));
-        $spaceId = $request->space_id ?? $request->get('space_id');
-
-        if ($startTime->isPast()) {
-            return 'No se pueden crear reservas en fechas pasadas';
-        }
-
-        $durationInMinutes = $startTime->diffInMinutes($endTime);
-        if ($durationInMinutes < 30) {
-            return 'La duración mínima de una reserva es de 30 minutos';
-        }
-        if ($durationInMinutes > 480) {
-            return 'La duración máxima de una reserva es de 8 horas';
-        }
-
-        $space = Space::find($spaceId);
-        if (!$space || !$space->is_available) {
-            return 'El espacio no está disponible';
-        }
-
-        if ($request->has('attendees_count') && $request->attendees_count > $space->capacity) {
-            return 'El número de asistentes excede la capacidad del espacio';
-        }
-
-        $overlappingBookings = Booking::where('space_id', $spaceId)
-            ->where('status', '!=', 'cancelled')
-            ->where(function ($query) use ($startTime, $endTime) {
-                $query->whereBetween('start_time', [$startTime, $endTime])
-                    ->orWhereBetween('end_time', [$startTime, $endTime])
-                    ->orWhere(function ($q) use ($startTime, $endTime) {
-                        $q->where('start_time', '<=', $startTime)
-                          ->where('end_time', '>=', $endTime);
-                    });
-            });
-
-        if ($excludeBookingId) {
-            $overlappingBookings->where('id', '!=', $excludeBookingId);
-        }
-
-        if ($overlappingBookings->exists()) {
-            return 'Ya existe una reserva para este espacio en el horario seleccionado';
-        }
-
-        $activeBookingsCount = Booking::where('user_id', $user->id)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->where('start_time', '>', now())
-            ->count();
-
-        if ($excludeBookingId) {
-            $activeBookingsCount--;
-        }
-
-        if ($activeBookingsCount >= 5) {
-            return 'Has alcanzado el límite máximo de 5 reservas activas';
-        }
-
-        return null;
     }
 }

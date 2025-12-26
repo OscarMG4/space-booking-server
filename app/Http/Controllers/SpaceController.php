@@ -2,79 +2,47 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Space;
+use App\Http\Requests\Space\StoreSpaceRequest;
+use App\Http\Requests\Space\UpdateSpaceRequest;
+use App\Http\Resources\SpaceResource;
+use App\Services\SpaceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class SpaceController extends Controller
 {
+    protected $spaceService;
+
+    public function __construct(SpaceService $spaceService)
+    {
+        $this->spaceService = $spaceService;
+    }
     public function index(Request $request)
     {
-        $query = Space::query();
-
-        if ($request->has('type')) {
-            $query->where('type', $request->type);
-        }
-
-        if ($request->has('is_available')) {
-            $query->where('is_available', filter_var($request->is_available, FILTER_VALIDATE_BOOLEAN));
-        }
-
-        if ($request->has('min_capacity')) {
-            $query->where('capacity', '>=', $request->min_capacity);
-        }
-
-        if ($request->has('max_price')) {
-            $query->where('price_per_hour', '<=', $request->max_price);
-        }
-
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $spaces = $query->paginate($request->get('per_page', 15));
+        $filters = $request->only(['type', 'is_available', 'min_capacity', 'max_price', 'search']);
+        $perPage = $request->get('per_page', 15);
+        
+        $spaces = $this->spaceService->getSpaces($filters, $perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $spaces
+            'data' => SpaceResource::collection($spaces)->response()->getData(true)
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreSpaceRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'type' => 'required|string|in:sala_reuniones,oficina,auditorio,laboratorio,espacio_coworking,otro',
-            'capacity' => 'required|integer|min:1',
-            'price_per_hour' => 'required|numeric|min:0',
-            'location' => 'required|string|max:255',
-            'floor' => 'nullable|string|max:50',
-            'amenities' => 'nullable|array',
-            'image_url' => 'nullable|url',
-            'is_available' => 'boolean',
-            'rules' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $space = Space::create($request->all());
+        $space = $this->spaceService->createSpace($request->validated());
 
         return response()->json([
             'success' => true,
             'message' => 'Espacio creado exitosamente',
-            'data' => $space
+            'data' => new SpaceResource($space)
         ], 201);
     }
 
     public function show($id)
     {
-        $space = Space::find($id);
+        $space = $this->spaceService->getSpaceWithRelations($id);
 
         if (!$space) {
             return response()->json([
@@ -82,18 +50,16 @@ class SpaceController extends Controller
                 'message' => 'Espacio no encontrado'
             ], 404);
         }
-
-        $space->load('reviews', 'availabilities');
 
         return response()->json([
             'success' => true,
-            'data' => $space
+            'data' => new SpaceResource($space)
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateSpaceRequest $request, $id)
     {
-        $space = Space::find($id);
+        $space = $this->spaceService->getSpaceWithRelations($id);
 
         if (!$space) {
             return response()->json([
@@ -102,39 +68,18 @@ class SpaceController extends Controller
             ], 404);
         }
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|required|string',
-            'type' => 'sometimes|required|string|in:sala_reuniones,oficina,auditorio,laboratorio,espacio_coworking,otro',
-            'capacity' => 'sometimes|required|integer|min:1',
-            'price_per_hour' => 'sometimes|required|numeric|min:0',
-            'location' => 'sometimes|required|string|max:255',
-            'floor' => 'nullable|string|max:50',
-            'amenities' => 'nullable|array',
-            'image_url' => 'nullable|url',
-            'is_available' => 'boolean',
-            'rules' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $space->update($request->all());
+        $space = $this->spaceService->updateSpace($space, $request->validated());
 
         return response()->json([
             'success' => true,
             'message' => 'Espacio actualizado exitosamente',
-            'data' => $space
+            'data' => new SpaceResource($space)
         ]);
     }
 
     public function destroy($id)
     {
-        $space = Space::find($id);
+        $space = $this->spaceService->getSpaceWithRelations($id);
 
         if (!$space) {
             return response()->json([
@@ -143,23 +88,18 @@ class SpaceController extends Controller
             ], 404);
         }
 
-        $activeBookings = $space->bookings()
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->where('end_time', '>', now())
-            ->count();
+        try {
+            $this->spaceService->deleteSpace($space);
 
-        if ($activeBookings > 0) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Espacio eliminado exitosamente'
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede eliminar el espacio porque tiene reservas activas'
+                'message' => $e->getMessage()
             ], 422);
         }
-
-        $space->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Espacio eliminado exitosamente'
-        ]);
     }
 }
