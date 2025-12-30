@@ -16,7 +16,7 @@ class UpdateSpaceRequest extends FormRequest
         return [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
-            'type' => 'sometimes|required|string|in:sala_reuniones,oficina,auditorio,laboratorio,espacio_coworking,otro',
+            'type' => 'sometimes|required|string|in:meeting_room,office,auditorium,laboratory,coworking_space,other',
             'capacity' => 'sometimes|required|integer|min:1',
             'price_per_hour' => 'sometimes|required|numeric|min:0',
             'location' => 'sometimes|required|string|max:255',

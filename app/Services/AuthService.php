@@ -20,6 +20,14 @@ class AuthService
             'is_active' => true,
         ]);
 
+        $defaultRole = \App\Models\Role::firstOrCreate(
+            ['slug' => 'user'],
+            ['name' => 'Usuario', 'description' => 'Usuario estándar del sistema']
+        );
+        $user->roles()->attach($defaultRole->id);
+
+        $user->load('roles');
+
         $token = JWTAuth::fromUser($user);
 
         return [
@@ -40,9 +48,13 @@ class AuthService
 
         $user = $guard->user();
 
-        if (!$user->is_active) {
+        if (!$user || !$user->is_active) {
             throw new \Exception('Usuario inactivo');
         }
+
+        /** @var \App\Models\User|null $user */
+
+        $user->load('roles');
 
         return [
             'user' => $user,
@@ -71,7 +83,14 @@ class AuthService
 
     public function getAuthenticatedUser()
     {
-        return auth('api')->user();
+        /** @var \App\Models\User|null $user */
+        $user = auth('api')->user();
+        
+        if ($user) {
+            $user->load('roles');
+        }
+        
+        return $user;
     }
 
     public function isUserActive(User $user): bool

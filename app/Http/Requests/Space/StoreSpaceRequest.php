@@ -16,7 +16,7 @@ class StoreSpaceRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'description' => 'required|string',
-            'type' => 'required|string|in:sala_reuniones,oficina,auditorio,laboratorio,espacio_coworking,otro',
+            'type' => 'required|string|in:meeting_room,office,auditorium,laboratory,coworking_space,other',
             'capacity' => 'required|integer|min:1',
             'price_per_hour' => 'required|numeric|min:0',
             'location' => 'required|string|max:255',
